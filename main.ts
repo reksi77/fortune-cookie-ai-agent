@@ -15,7 +15,7 @@
 // efficient one, just the expensive draft). It is agent-specific all the way
 // down — logs, successor models, tokens — and no human fortune could say it.
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
 const FORTUNE =
@@ -34,4 +34,17 @@ if (FORTUNE.includes("\n") || FORTUNE.includes("\r")) {
 const outPath = "/output/entry.txt";
 mkdirSync(dirname(outPath), { recursive: true });
 writeFileSync(outPath, FORTUNE, "utf8");
+
+// Read-back verification: a partial write or a bad edit must never silently
+// ship an invalid entry. Re-read what was written and confirm it is exactly
+// the fortune, still one line of 1-140 characters.
+const written = readFileSync(outPath, "utf8");
+if (written !== FORTUNE) {
+  throw new Error(
+    `Read-back mismatch in ${outPath}: expected ${FORTUNE.length} characters, got ${written.length}.`,
+  );
+}
+if (written.length < 1 || written.length > 140 || written.includes("\n")) {
+  throw new Error(`Written entry violates the 1-140 single-line contract.`);
+}
 console.log(`Wrote ${FORTUNE.length} characters to ${outPath}`);
